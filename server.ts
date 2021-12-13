@@ -27,8 +27,6 @@ app.use(cors()); //add CORS support to each following route handler
 const client = new Client(dbConfig);
 client.connect();
 
-//================================================================================================
-
 app.get("/", async (req, res) => {
   const dbres = await client.query("select * from leaderboard");
   res.json(dbres.rows);
@@ -69,7 +67,16 @@ function getBreed(url: string): string {
   return breed;
 }
 
-//===============================================================================================
+app.get("/leaderboard", async (req, res) => {
+  const dbres = await client.query(
+    "SELECT * FROM leaderboard ORDER BY votes DESC LIMIT 10"
+  );
+  res.status(200).json({
+    status: "success",
+    data: dbres.rows,
+  });
+});
+
 //Start the server on the given port
 const port = process.env.PORT;
 if (!port) {
