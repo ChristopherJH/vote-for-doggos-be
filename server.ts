@@ -31,6 +31,16 @@ app.get("/", async (req, res) => {
   res.json(dbres.rows);
 });
 
+app.get("/leaderboard", async (req, res) => {
+  const dbres = await client.query(
+    "SELECT * FROM leaderboard ORDER BY votes DESC LIMIT 10"
+  );
+  res.status(200).json({
+    status: "success",
+    data: dbres.rows,
+  });
+});
+
 //Start the server on the given port
 const port = process.env.PORT;
 if (!port) {
