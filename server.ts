@@ -2,6 +2,7 @@ import { Client } from "pg";
 import { config } from "dotenv";
 import express from "express";
 import cors from "cors";
+import axios from "axios";
 
 config(); //Read .env file lines as though they were env vars.
 
@@ -26,11 +27,49 @@ app.use(cors()); //add CORS support to each following route handler
 const client = new Client(dbConfig);
 client.connect();
 
+//================================================================================================
+
 app.get("/", async (req, res) => {
   const dbres = await client.query("select * from leaderboard");
   res.json(dbres.rows);
 });
 
+app.get("/dogs/random", async (req, res) => {
+  try {
+    const response = await axios.get("https://dog.ceo/api/breeds/image/random");
+    const imgUrl: string = response.data.message;
+    let data = {
+      url: imgUrl,
+      breed: getBreed(imgUrl),
+    };
+    res.json(data);
+  } catch (err) {
+    console.error(err.message);
+  }
+});
+
+function getBreed(url: string): string {
+  const cutFirst = url.replace("https://images.dog.ceo/breeds/", "").split("/");
+  const unformattedBreed = cutFirst[0];
+  let nameArr = [];
+  let breed;
+  if (unformattedBreed.includes("-")) {
+    const breedArr = unformattedBreed.split("-");
+    for (const str of breedArr) {
+      nameArr.push(
+        `${str.slice(0, 1).toUpperCase()}${str.slice(1, str.length)}`
+      );
+    }
+    breed = `${nameArr[1]} ${nameArr[0]}`;
+  } else {
+    breed = `${unformattedBreed
+      .slice(0, 1)
+      .toUpperCase()}${unformattedBreed.slice(1, unformattedBreed.length)}`;
+  }
+  return breed;
+}
+
+//===============================================================================================
 //Start the server on the given port
 const port = process.env.PORT;
 if (!port) {
