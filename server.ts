@@ -37,15 +37,30 @@ app.get("/", async (req, res) => {
 app.get("/dogs/random", async (req, res) => {
   try {
     const response = await axios.get("https://dog.ceo/api/breeds/image/random");
+
     const imgUrl: string = response.data.message;
+    let breed = getBreed(imgUrl);
     let data = {
       url: imgUrl,
-      breed: getBreed(imgUrl),
+      breedName: breed,
     };
+    const createDog = await client.query(
+      "INSERT INTO leaderboard (breed) VALUES($1) ON CONFLICT (breed) DO NOTHING",
+      [data.breedName]
+    );
     res.json(data);
   } catch (err) {
     console.error(err.message);
   }
+});
+
+app.put("/dogs/addvote", async (req, res) => {
+  const { breed } = req.body;
+  const result = await client.query(
+    "UPDATE leaderboard SET votes = (votes + 1) WHERE breed = $1",
+    [breed]
+  );
+  res.json(result.rows);
 });
 
 function getBreed(url: string): string {
