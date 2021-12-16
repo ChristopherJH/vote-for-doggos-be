@@ -3,6 +3,7 @@ import { config } from "dotenv";
 import express from "express";
 import cors from "cors";
 import axios from "axios";
+import { getBreed } from "./utils/getBreed";
 
 config(); //Read .env file lines as though they were env vars.
 
@@ -37,14 +38,15 @@ app.get("/dogs/random", async (req, res) => {
     const response = await axios.get("https://dog.ceo/api/breeds/image/random");
 
     const imgUrl: string = response.data.message;
-    let breed = getBreed(imgUrl);
+    let [unformattedBreed, breed] = getBreed(imgUrl);
     let data = {
       url: imgUrl,
-      breedName: breed,
+      breed: breed,
+      unformattedBreed: unformattedBreed,
     };
     const createDog = await client.query(
-      "INSERT INTO leaderboard (breed) VALUES($1) ON CONFLICT (breed) DO NOTHING",
-      [data.breedName]
+      "INSERT INTO leaderboard (breed, url_breed) VALUES($1, $2) ON CONFLICT (breed) DO NOTHING",
+      [data.breed, data.unformattedBreed]
     );
     res.json(data);
   } catch (err) {
@@ -60,27 +62,6 @@ app.put("/dogs/addvote", async (req, res) => {
   );
   res.json(result.rows);
 });
-
-function getBreed(url: string): string {
-  const cutFirst = url.replace("https://images.dog.ceo/breeds/", "").split("/");
-  const unformattedBreed = cutFirst[0];
-  let nameArr = [];
-  let breed;
-  if (unformattedBreed.includes("-")) {
-    const breedArr = unformattedBreed.split("-");
-    for (const str of breedArr) {
-      nameArr.push(
-        `${str.slice(0, 1).toUpperCase()}${str.slice(1, str.length)}`
-      );
-    }
-    breed = `${nameArr[1]} ${nameArr[0]}`;
-  } else {
-    breed = `${unformattedBreed
-      .slice(0, 1)
-      .toUpperCase()}${unformattedBreed.slice(1, unformattedBreed.length)}`;
-  }
-  return breed;
-}
 
 app.get("/leaderboard", async (req, res) => {
   const dbres = await client.query(
